@@ -1,6 +1,6 @@
 # 💥 matchstick
 
-Rust-based Kraken client and benchmarking harness designed to interact with the [matchbook](https://github.com/PaddyConnolly/matchbook.git) for testing and performance evaluation.
+Rust-based Kraken client and benchmarking harness designed to interact with [matchbook](https://github.com/PaddyConnolly/matchbook.git) for testing and performance evaluation.
 
 ## Planned Features
 
