@@ -1,6 +1,6 @@
 use crate::messages::{SubscribeParams, SubscribeRequest, TokenResponse};
 use base64::{Engine as _, engine::general_purpose};
-use futures_util::SinkExt;
+use futures_util::{SinkExt, StreamExt};
 use hmac::{Hmac, Mac};
 use serde::Serialize;
 use sha2::{Digest, Sha256, Sha512};
@@ -25,6 +25,8 @@ pub enum ConnectionError {
     MissingToken,
     #[error("API Error: {0:?}")]
     ApiError(String),
+    #[error("Invalid message")]
+    InvalidMessage,
 }
 
 #[allow(dead_code)]
@@ -39,6 +41,16 @@ pub struct TokenRequest {
 }
 
 impl KrakenClient {
+    pub async fn read(&mut self) -> Result<String, ConnectionError> {
+        if let Some(res) = self.stream.next().await
+            && let Ok(Message::Text(msg)) = res
+        {
+            Ok(msg.to_string())
+        } else {
+            Err(ConnectionError::InvalidMessage)
+        }
+    }
+
     fn kraken_api_sign(path: &str, nonce: &str, postdata: &str, api_secret: &str) -> String {
         // 1. SHA256(nonce + postdata)
         let mut sha256 = Sha256::new();
@@ -64,13 +76,14 @@ impl KrakenClient {
     }
 
     pub async fn new() -> Result<KrakenClient, ConnectionError> {
+        dotenvy::dotenv().ok();
         let api_key = env::var("KRAKEN_API_KEY").map_err(|_| ConnectionError::MissingApiKey)?;
         let api_secret =
             env::var("KRAKEN_PRIVATE_KEY").map_err(|_| ConnectionError::MissingApiKey)?;
         let nonce = chrono::Utc::now().timestamp_millis().to_string();
         let postdata = format!("nonce={}", nonce);
         let url = "https://api.kraken.com/0/private/GetWebSocketsToken";
-        let path = "https://api.kraken.com/0/private/GetWebSocketsToken";
+        let path = "/0/private/GetWebSocketsToken";
         let ws = "wss://ws-l3.kraken.com/v2";
 
         let api_sign = Self::kraken_api_sign(path, &nonce, &postdata, &api_secret);
@@ -96,7 +109,7 @@ impl KrakenClient {
             .post(url)
             .header("API-Key", api_key)
             .header("API-Sign", api_sign)
-            .header("Content-Type", "x-www-form-urlencoded")
+            .header("Content-Type", "application/x-www-form-urlencoded")
             .header("Accept", "application/json")
             .body(postdata)
             .send()
