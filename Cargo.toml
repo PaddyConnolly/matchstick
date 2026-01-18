@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 criterion = "0.8.1"
 hdrhistogram = "7.5.4"
+http = "1.4.0"
 inferno = "0.12.4"
 reqwest = "0.13.1"
 serde = "1.0.228"

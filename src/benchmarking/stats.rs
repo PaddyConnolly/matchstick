@@ -8,13 +8,14 @@ pub struct LatencyStats {
     match_order: Histogram<u64>,
 }
 
-#[derive(Debug)]
+#[allow(dead_code)]
 pub struct LatencyReport {
     p50: u64,
     p95: u64,
     p99: u64,
 }
-#[derive(Debug)]
+
+#[allow(dead_code)]
 pub struct StatsSummary {
     add_order: LatencyReport,
     cancel_order: LatencyReport,
@@ -61,5 +62,11 @@ impl LatencyStats {
             cancel_order,
             match_order,
         }
+    }
+}
+
+impl Default for LatencyStats {
+    fn default() -> Self {
+        Self::new()
     }
 }

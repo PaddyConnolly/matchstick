@@ -1,5 +1,5 @@
+use http::HeaderValue;
 use std::env;
-use thiserror::Error;
 use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
@@ -8,21 +8,27 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 pub enum ConnectionError {
     #[error("Failed to connect to Kraken's API")]
     FailedToConnect(#[from] tokio_tungstenite::tungstenite::Error),
+    #[error("Missing API Key")]
+    MissingApiKey,
 }
+
+#[allow(dead_code)]
 pub struct KrakenClient {
     stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
-    channel: String,
+    url: String,
 }
 
 impl KrakenClient {
-    pub async fn new(channel: String) -> Result<KrakenClient, ConnectionError> {
-        let mut request = "wss://ws-l3.kraken.com/v2".into_client_request().unwrap();
+    pub async fn new(url: String) -> Result<KrakenClient, ConnectionError> {
+        let mut request = url.clone().into_client_request().unwrap();
         request.headers_mut().insert(
             "api-key",
-            HeaderValue::from_str(env::var("KRAKEN_API_KEY").unwrap().as_ref()),
+            HeaderValue::from_str(env::var("KRAKEN_API_KEY").unwrap().as_ref())
+                .ok()
+                .unwrap(),
         );
 
         let (stream, _) = connect_async(request).await?;
-        Ok(KrakenClient { stream, channel })
+        Ok(KrakenClient { stream, url })
     }
 }
