@@ -22,18 +22,6 @@ pub fn process_message(orderbook: &mut Orderbook, message: Response) -> Result<(
         return Err(ParseError::Empty);
     }
 
-    if message.message_type == "snapshot" {
-        println!("Processing snapshot...");
-        orderbook.clear_trades()
-    };
-
-    // After processing:
-    println!(
-        "Book has {} bid levels, {} ask levels",
-        orderbook.get_levels().bids().len(),
-        orderbook.get_levels().asks().len()
-    );
-
     for data in &message.data {
         for bid in &data.bids {
             process_event(orderbook, bid, true)?;

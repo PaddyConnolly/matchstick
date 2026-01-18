@@ -15,7 +15,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if let Ok(message) = serde_json::from_str::<Response>(&msg) {
             match process_message(&mut orderbook, message) {
-                Ok(()) => println!("Processed message"),
+                Ok(()) => {
+                    if let Some(mid) = orderbook.midprice() {
+                        println!("Mid: {:.2}", mid.0 as f64 / 100.0);
+                    }
+                }
                 Err(e) => println!("Skip: {}", e),
             }
         } else {

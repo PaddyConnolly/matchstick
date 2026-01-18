@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 matchbook = { git = "https://github.com/PaddyConnolly/matchbook" }
-#matchbook = {path = "../matchbook/"} - for local dev
+#matchbook = {path = "../matchbook/"} # - for local dev
 base64 = "0.22.1"
 chrono = "0.4.43"
 criterion = "0.8.1"
