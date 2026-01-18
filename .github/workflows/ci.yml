@@ -45,5 +45,5 @@ jobs:
 
       - name: Coverage
         run: |
-          cargo llvm-cov --all-targets --all-features --xml
+          cargo llvm-cov --all-targets --all-features --cobertura
 
