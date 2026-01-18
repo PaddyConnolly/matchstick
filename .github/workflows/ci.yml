@@ -17,7 +17,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
 
       - uses: mozilla-actions/sccache-action@v0.0.5
       - run: echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
@@ -40,7 +40,10 @@ jobs:
       - name: Test
         run: cargo test
 
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
+
       - name: Coverage
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          args: "--all-features --out Xml"
+        run: |
+          cargo llvm-cov --all-targets --all-features --xml
+
