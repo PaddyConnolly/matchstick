@@ -133,7 +133,7 @@ impl KrakenClient {
 
         let params = SubscribeParams {
             channel: "level3".to_string(),
-            symbol: vec!["BTC/USD".to_string()],
+            symbol: vec!["ETH/BTC".to_string()],
             depth: Some(1000),
             snapshot: Some(true),
             token,
