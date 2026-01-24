@@ -18,3 +18,21 @@ Set your Kraken API credentials as environment variables:
 export KRAKEN_API_KEY="your_api_key"
 export KRAKEN_API_SECRET="your_api_secret"
 ```
+
+## Usage
+
+Run the full benchmark suite:
+
+```bash
+./scripts/bench.sh
+```
+
+The script will:
+
+- Detect OS and verify privileges
+- Run pre-flight checks (Rust, project dependencies, AC power)
+- Collect detailed system information
+- Configure the system for optimal benchmarking (macOS/Linux)
+- Build the release binary
+- Execute benchmarks (`warmup`, `criterion`, `flamegraph`, `perf`, live latency)
+- Generate a summary report
