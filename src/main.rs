@@ -1,5 +1,9 @@
 use battery::{Manager, State};
 use chrono::prelude::*;
+use matchbook::orderbook::Orderbook;
+use matchstick::adapter::ParseError;
+use matchstick::kraken::client::KrakenClient;
+use matchstick::messages::{Data, Response};
 use std::fs::{self, create_dir_all};
 use std::process::{Command, Stdio, exit};
 use sysinfo::System;
@@ -15,6 +19,53 @@ fn init_logging() {
         .init();
 }
 
+pub fn process_message(orderbook: &mut Orderbook, message: Response) -> Result<(), ParseError> {
+    if message.channel != "level3" {
+        return Err(ParseError::InvalidChannel);
+    }
+    if message.message_type != "update" {
+        return Err(ParseError::InvalidType);
+    }
+    if message.data.is_empty() {
+        return Err(ParseError::Empty);
+    }
+
+    for data in &message.data {
+        // Process bids
+        for event in &data.bids {
+            process_event(orderbook, event, true)?;
+        }
+        // Process asks
+        for event in &data.asks {
+            process_event(orderbook, event, false)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn process_event(
+    orderbook: &mut Orderbook,
+    event: &OrderEvent,
+    is_bid: bool,
+) -> Result<(), ParseError> {
+    match event.event {
+        EventType::Add => {
+            let order = to_order(event, is_bid);
+            orderbook.add(order)?;
+        }
+        EventType::Modify => {
+            let id = to_order_id(&event.order_id);
+            let qty = to_quantity(event.order_qty);
+            orderbook.modify_order(id, qty)?;
+        }
+        EventType::Delete => {
+            let id = to_order_id(&event.order_id);
+            orderbook.cancel_order(id)?;
+        }
+    }
+    Ok(())
+}
 // Directory to save benchmark reports
 const REPORT_DIR: &str = "reports";
 
@@ -216,10 +267,34 @@ fn run_perf_stat() {
 }
 
 /// Live latency measurements (custom)
-#[allow(dead_code)]
-fn run_live_latency() {
+async fn run_live_latency() -> Result<LatencyStats, Box<dyn std::error::Error>> {
     info!("Running live latency benchmarks...");
-    todo!()
+    dotenvy::dotenv().ok();
+
+    let mut client = KrakenClient::new().await?;
+    let mut orderbook = Orderbook::new();
+    let mut stats = LatencyStats::new();
+
+    let duration = std::time::Duration::from_secs(60);
+    let start = std::time::Instant::now();
+
+    while start.elapsed() < duration {
+        let msg = client.read().await?;
+
+        if let Ok(update) = serde_json::from_str::<Update>(&msg) {
+            let op_start = std::time::Instant::now();
+            let result = process_update(&mut orderbook, update);
+            let elapsed = op_start.elapsed();
+
+            match result {
+                Ok(()) => stats.record_add(elapsed), // TODO: distinguish add/modify/delete
+                Err(_) => {}
+            }
+        }
+    }
+
+    info!("Processed messages for {:?}", duration);
+    Ok(stats)
 }
 
 // Generate summary
@@ -235,7 +310,8 @@ fn generate_summary() {
 }
 
 // Run benchmark suite
-fn main() {
+#[tokio::main]
+async fn main() {
     init_logging();
     preflight_checks();
     collect_system_info();
@@ -245,7 +321,7 @@ fn main() {
     run_criterion();
     //run_flamegraph();
     run_perf_stat();
-    //run_live_latency();
+    run_live_latency().await;
 
     generate_summary();
 
